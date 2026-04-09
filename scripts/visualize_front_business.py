@@ -209,7 +209,6 @@ def create_network_visualization(pattern_data, nodes_df, edges_df):
 
     # Position overseas accounts on the right side (vertically distributed)
     num_overseas = len(overseas_business_accounts)
-    print('num_overseas', num_overseas)
     if num_overseas > 0:
         y_spacing = 2.5 if num_overseas > 1 else 0
         y_start = (num_overseas - 1) * y_spacing / 2
@@ -246,10 +245,6 @@ def create_network_visualization(pattern_data, nodes_df, edges_df):
 
     # Draw nodes with clear styling, ensuring cash_account is drawn on top of front_business
     node_list = list(G.nodes())
-    print("front business id :", front_business)
-    print("cash account id   :", cash_account)
-    print("pos[fb]           :", pos[front_business])
-    print("pos[cash]         :", pos[cash_account])
     if front_business in node_list:
         node_list.remove(front_business)
         node_list.insert(0, front_business)  # Draw first

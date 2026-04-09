@@ -31,6 +31,8 @@ from tide.graph_generator import GraphGenerator
 from tide.outputs import export_to_csv
 from tide.datastructures.enums import EdgeType
 
+logger = logging.getLogger(__name__)
+
 
 def compute_homophily(graph: nx.DiGraph) -> Dict[str, float]:
     """
@@ -212,7 +214,7 @@ def convert_enums_to_strings(graph: nx.DiGraph) -> nx.DiGraph:
             try:
                 attrs[key] = convert_value(value)
             except Exception as e:
-                print(f"Warning: Could not convert node attribute {key}={value}: {e}")
+                logger.warning(f"Could not convert node attribute {key}={value}: {e}")
                 attrs[key] = str(type(value).__name__)
 
     for src, dest, attrs in converted_graph.edges(data=True):
@@ -220,7 +222,7 @@ def convert_enums_to_strings(graph: nx.DiGraph) -> nx.DiGraph:
             try:
                 attrs[key] = convert_value(value)
             except Exception as e:
-                print(f"Warning: Could not convert edge attribute {key}={value}: {e}")
+                logger.warning(f"Could not convert edge attribute {key}={value}: {e}")
                 attrs[key] = str(type(value).__name__)
 
     return converted_graph
@@ -259,8 +261,8 @@ def filter_by_institution_country(graph: nx.DiGraph, filter_country: str) -> nx.
             if attrs.get('institution_id') in target_institutions:
                 filtered_accounts.add(node_id)
 
-    print(f"Institution filter: country={filter_country}, "
-          f"found {len(target_institutions)} institutions, {len(filtered_accounts)} accounts")
+    logger.info(f"Institution filter: country={filter_country}, "
+                f"found {len(target_institutions)} institutions, {len(filtered_accounts)} accounts")
 
     filtered = graph.copy()
     edges_to_remove = []
@@ -278,8 +280,8 @@ def filter_by_institution_country(graph: nx.DiGraph, filter_country: str) -> nx.
     filtered.remove_nodes_from(isolated_nodes)
     remaining_nodes = filtered.number_of_nodes()
 
-    print(f"Institution filter applied: {remaining_edges}/{total_edges} edges retained, "
-          f"{remaining_nodes}/{total_nodes} nodes retained ({len(isolated_nodes)} isolated nodes removed)")
+    logger.info(f"Institution filter applied: {remaining_edges}/{total_edges} edges retained, "
+                f"{remaining_nodes}/{total_nodes} nodes retained ({len(isolated_nodes)} isolated nodes removed)")
 
     return filtered
 
@@ -323,16 +325,16 @@ if __name__ == "__main__":
 
     # Load and merge configurations
     generator_parameters = load_configurations(args.config)
-    print(f'Loading configuration from: {args.config}')
+    logger.info(f'Loading configuration from: {args.config}')
 
     # Load output configurations
     output_config_path = args.output_config
     if os.path.exists(output_config_path):
         with open(output_config_path, 'r') as f:
             output_config = yaml.safe_load(f)
-            print(f'Loading output configuration from: {output_config_path}')
+            logger.info(f'Loading output configuration from: {output_config_path}')
     else:
-        print(f"Output configuration file not found at {output_config_path}, using defaults.")
+        logger.info(f"Output configuration file not found at {output_config_path}, using defaults.")
         output_config = {
             'CSVfiles': True,
             'GraphML': False,
@@ -348,37 +350,34 @@ if __name__ == "__main__":
     aml_graph_gen = GraphGenerator(params=generator_parameters)
     graph = aml_graph_gen.generate_graph()
 
-    print(f"\n--- Graph Summary ---")
-    print(f"Number of nodes: {aml_graph_gen.num_of_nodes()}")
-    print(f"Number of edges: {aml_graph_gen.num_of_edges()}")
+    logger.info(f"Graph Summary: {aml_graph_gen.num_of_nodes()} nodes, {aml_graph_gen.num_of_edges()} edges")
 
     homophily = compute_homophily(graph)
     edge_label_h = compute_edge_label_homophily(graph)
 
-    print(f"\n--- Node-label homophily ---")
-    print(f"  Edge homophily (all classes):  {homophily['edge_homophily']:.6f}")
-    print(f"  Fraud-class homophily:         {homophily['fraud_homophily']:.6f}")
-    print(f"  Fraud node ratio:              {homophily['fraud_node_ratio']:.6f}")
-    print(f"  Fraud edge ratio:              {homophily['fraud_edge_ratio']:.6f}")
+    logger.info(f"Node-label homophily: edge={homophily['edge_homophily']:.6f}, "
+                f"fraud={homophily['fraud_homophily']:.6f}, "
+                f"fraud_node_ratio={homophily['fraud_node_ratio']:.6f}, "
+                f"fraud_edge_ratio={homophily['fraud_edge_ratio']:.6f}")
 
-    print(f"\n--- Edge-label homophily ---")
-    print(f"  Homophily (overall):           {edge_label_h['homophily_overall']:.6f}")
+    edge_h_msg = f"Edge-label homophily: overall={edge_label_h['homophily_overall']:.6f}"
     if 'homophily_class_0' in edge_label_h:
-        print(f"  Homophily (class 0 - legit):   {edge_label_h['homophily_class_0']:.6f}")
+        edge_h_msg += f", class_0={edge_label_h['homophily_class_0']:.6f}"
     if 'homophily_class_1' in edge_label_h:
-        print(f"  Homophily (class 1 - fraud):   {edge_label_h['homophily_class_1']:.6f}")
-    print(f"  Fraud rate:                    {edge_label_h['fraud_rate']:.6f}")
+        edge_h_msg += f", class_1={edge_label_h['homophily_class_1']:.6f}"
+    edge_h_msg += f", fraud_rate={edge_label_h['fraud_rate']:.6f}"
+    logger.info(edge_h_msg)
 
     # Get filter settings
     institution_filter_country = generator_parameters.get('institution_filter_country')
     if institution_filter_country:
-        print(f"\nInstitution filter enabled: filtering to country '{institution_filter_country}'")
+        logger.info(f"Institution filter enabled: filtering to country '{institution_filter_country}'")
 
     remove_isolated_nodes = output_config.get('RemoveIsolatedNodes', True)
 
     # Export to CSV
     if output_config.get('CSVfiles', True):
-        print("\nExporting to CSV...")
+        logger.info("Exporting to CSV...")
         export_to_csv(
             graph=graph,
             nodes_filepath=nodes_filepath,
@@ -404,8 +403,8 @@ if __name__ == "__main__":
     with open(patterns_filepath, 'w') as f:
         json.dump(patterns_data, f, indent=2, default=str)
 
-    print(f"Exported {len(aml_graph_gen.injected_patterns)} tracked patterns to: {patterns_filepath}")
-    print(f"Generated files saved to: {args.output_dir}")
+    logger.info(f"Exported {len(aml_graph_gen.injected_patterns)} tracked patterns to: {patterns_filepath}")
+    logger.info(f"Generated files saved to: {args.output_dir}")
 
     # Prepare graph for additional exports (GraphML, Gpickle)
     transactions_only = output_config.get('TransactionsOnly', False)
@@ -420,23 +419,23 @@ if __name__ == "__main__":
             total_before = graph_for_exports.number_of_nodes()
             graph_for_exports = graph_for_exports.copy()
             graph_for_exports.remove_nodes_from(isolated)
-            print(f"Removed {len(isolated)} isolated nodes "
-                  f"({graph_for_exports.number_of_nodes()}/{total_before} nodes retained)")
+            logger.info(f"Removed {len(isolated)} isolated nodes "
+                        f"({graph_for_exports.number_of_nodes()}/{total_before} nodes retained)")
 
     # Export to GraphML
     if output_config.get('GraphML', False):
-        print("\nSaving graph in GraphML format...")
+        logger.info("Saving graph in GraphML format...")
         converted_graph = convert_enums_to_strings(graph_for_exports)
         nx.write_graphml(converted_graph, graphml_filepath)
-        print(f"Graph saved as: {graphml_filepath}")
+        logger.info(f"Graph saved as: {graphml_filepath}")
 
     # Export to Gpickle
     if output_config.get('Gpickle', False):
-        print("\nSaving graph in Gpickle format...")
+        logger.info("Saving graph in Gpickle format...")
         converted_graph = convert_enums_to_strings(graph_for_exports)
         with open(gpickle_filepath, 'wb') as f:
             pickle.dump(converted_graph, f, pickle.HIGHEST_PROTOCOL)
-        print(f"Graph saved as: {gpickle_filepath}")
+        logger.info(f"Graph saved as: {gpickle_filepath}")
 
-    print("\nTo convert to PyTorch Geometric format, run:")
-    print(f"  python tools/csv_to_pytorch.py --nodes {nodes_filepath} --edges {transactions_filepath} --output graph.pt")
+    logger.info(f"To convert to PyTorch Geometric format, run: "
+                f"python tools/csv_to_pytorch.py --nodes {nodes_filepath} --edges {transactions_filepath} --output graph.pt")

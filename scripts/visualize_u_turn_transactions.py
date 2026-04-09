@@ -91,42 +91,24 @@ def generate_pattern_data():
 
 def find_originator(account_id, edges_df, nodes_df):
     """Find the owner of an account."""
-    print("\n--- Debugging find_originator ---")
-    print(f"Searching for owner of account: {account_id}")
-
     # Check available edge types
     available_edge_types = edges_df['edge_type'].unique()
-    print(f"Available edge types in data: {available_edge_types}")
-    if 'EdgeType.OWNERSHIP' not in available_edge_types:
-        print("ERROR: 'EdgeType.OWNS_ACCOUNT' not found in edge types.")
 
     # Filter for ownership edges for the specific account
     owner_edge = edges_df[(edges_df['dest'] == account_id) & (
         edges_df['edge_type'] == 'EdgeType.OWNERSHIP')]
 
     if owner_edge.empty:
-        print(
-            f"RESULT: Could not find an 'EdgeType.OWNS_ACCOUNT' edge where dest is '{account_id}'.")
-        print("This means the originator entity cannot be identified from the data.")
-        print("--- End Debugging ---\n")
         return None, None
 
-    print("SUCCESS: Found ownership edge.")
     owner_id = owner_edge.iloc[0]['src']
-    print(f"Owner entity ID from edge: {owner_id}")
 
     owner_info_series = nodes_df[nodes_df['node_id'] == owner_id]
     if owner_info_series.empty:
-        print(
-            f"ERROR: Found owner ID '{owner_id}' in edges, but this ID is not in the nodes file.")
-        print("--- End Debugging ---\n")
         return None, None
 
     owner_info = owner_info_series.iloc[0]
     owner_type = owner_info['node_type']
-    print(
-        f"SUCCESS: Found owner '{owner_id}' in nodes file. Type: {owner_type}")
-    print("--- End Debugging ---\n")
 
     return owner_id, {
         'type': owner_type,
