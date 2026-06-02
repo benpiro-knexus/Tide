@@ -214,9 +214,9 @@ high_transaction_amount_ratio: 0.05
 low_transaction_amount_ratio: 0.1
 
 account_categories:
-  - "Current"
-  - "Savings"
-  - "Loan"
+  - "current"
+  - "savings"
+  - "loan"
 
 high_risk_config:
   countries_weight_factor: 1.0

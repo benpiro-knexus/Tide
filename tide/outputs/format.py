@@ -7,7 +7,7 @@ from ..datastructures.attributes import (
     TransactionAttributes, OwnershipAttributes,
     IndividualAttributes, BusinessAttributes, InstitutionAttributes
 )
-from ..datastructures.enums import EdgeType, NodeType
+from ..datastructures.enums import AccountCategory, AgeGroup, EdgeType, Gender, NodeType, TransactionType
 
 logger = logging.getLogger(__name__)
 
@@ -111,6 +111,8 @@ def export_to_csv(
             row = {'src': src, 'dest': dest, **attrs}
             if isinstance(row.get('edge_type'), EdgeType):
                 row['edge_type'] = row['edge_type'].value
+            if isinstance(row.get('transaction_type'), TransactionType):
+                row['transaction_type'] = row['transaction_type'].value
             writer.writerow(row)
 
     # Transactions only
@@ -131,6 +133,8 @@ def export_to_csv(
                 row = {'src': src, 'dest': dest, **attrs}
                 if isinstance(row.get('edge_type'), EdgeType):
                     row['edge_type'] = row['edge_type'].value
+                if isinstance(row.get("transaction_type"), TransactionType):
+                    row["transaction_type"] = row["transaction_type"].value
                 writer.writerow(row)
 
     # Nodes (write after edges so we know which nodes to keep)
@@ -156,6 +160,14 @@ def export_to_csv(
                     continue
             filtered_nodes += 1
             row = {'node_id': node_id, **attrs}
+            if isinstance(row.get('account_category'), AccountCategory):
+                row['account_category'] = row['account_category'].value
+            if isinstance(row.get("age_group"), AgeGroup):
+                row["age_group"] = row["age_group"].value
+            if isinstance(row.get("gender"), Gender):
+                row["gender"] = row["gender"].value
+            if isinstance(row.get("node_type"), NodeType):
+                row["node_type"] = row["node_type"].value
             writer.writerow(row)
 
     # Log filtering summary
