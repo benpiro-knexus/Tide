@@ -96,7 +96,7 @@ class RepeatedOverseasTransfersStructural(StructuralComponent):
                     all_individuals_dest + all_businesses_dest) if e != entity_id]
 
                 # Use mixed selection: ~40% from high-risk countries, ~60% general
-                        dest_clusters = ["high_risk_countries", "offshore_candidates"]
+                dest_clusters = ["high_risk_countries", "offshore_candidates"]
                 mixed_dest_entities = self.get_mixed_risk_entities(
                     high_risk_clusters=dest_clusters,
                     fallback_pool=all_other_entities,
